@@ -31,6 +31,13 @@
 #include "cvd/byte.h"
 #include "MouseKeyHandler.h"
 
+//jan
+#include "ros/ros.h"
+#include <sensor_msgs/PointCloud2.h>
+
+#include "std_msgs/String.h"
+#include <sstream>
+
 class Map;
 class MapMaker;
 class Tracker;
@@ -184,6 +191,12 @@ public:
 
 	int PTAMInitializedClock;
 
+	// jan
+	ros::NodeHandle n;
+	ros::Publisher pub_cloud;
+	sensor_msgs::PointCloud2 msg_cloud;
+	ros::Publisher chatter_pub;
+	
 };
 
 #endif /* __PTAMWRAPPER_H */

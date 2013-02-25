@@ -75,6 +75,21 @@ PTAMWrapper::PTAMWrapper(DroneKalmanFilter* f, EstimationNode* nde)
 	maxKF = 60;
 
 	logfileScalePairs = 0;
+	
+	//jan
+	chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
+	std_msgs::String msg;
+ 
+     std::stringstream ss;
+     ss << "hello world " << count;
+     msg.data = ss.str();
+ 
+     ROS_INFO("%s", msg.data.c_str());
+     chatter_pub.publish(msg);
+
+	pub_cloud = n.advertise<sensor_msgs::PointCloud2> ("vslam/pc2", 1);
+
+	
 }
 
 void PTAMWrapper::ResetInternal()
@@ -533,6 +548,50 @@ void PTAMWrapper::HandleFrame()
 			pos += PTAMOffsets;
 			mapPointsTransformed.push_back(pos);
 		}
+
+		//jan
+		static unsigned int seq=0;
+		int dimension   = 3;
+
+		msg_cloud.header.seq=seq;
+		seq++;
+		msg_cloud.header.stamp = ros::Time::now();
+		msg_cloud.height = 1;
+		msg_cloud.header.frame_id = "/world";
+
+		msg_cloud.width = mapPointsTransformed.size();
+		msg_cloud.fields.resize(dimension);
+		msg_cloud.fields[0].name = "x";
+		msg_cloud.fields[0].offset = 0*sizeof(uint32_t);
+		msg_cloud.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
+		msg_cloud.fields[0].count = 1;
+		msg_cloud.fields[1].name = "y";
+		msg_cloud.fields[1].offset = 1*sizeof(uint32_t);
+		msg_cloud.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
+		msg_cloud.fields[1].count = 1;
+		msg_cloud.fields[2].name = "z";
+		msg_cloud.fields[2].offset = 2*sizeof(uint32_t);
+		msg_cloud.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
+		msg_cloud.fields[2].count = 1;
+
+		msg_cloud.point_step = dimension*sizeof(uint32_t);
+		msg_cloud.row_step = msg_cloud.point_step * msg_cloud.width;
+		msg_cloud.data.resize(msg_cloud.row_step * msg_cloud.height);
+		msg_cloud.is_dense = false;
+
+		unsigned char* dat = &(msg_cloud.data[0]);
+
+		for(unsigned int i=0;i<mapPointsTransformed.size();i++)
+		{
+			
+			memcpy(dat,&mapPointsTransformed[i][0],sizeof(uint32_t));
+			memcpy(dat+sizeof(uint32_t),&mapPointsTransformed[i][1],sizeof(uint32_t));
+			memcpy(dat+2*sizeof(uint32_t),&mapPointsTransformed[i][2],sizeof(uint32_t));
+			dat+=msg_cloud.point_step;
+		}
+
+		pub_cloud.publish(msg_cloud);
+		//jan
 
 		// flush map keypoints
 		if(flushMapKeypoints)
