@@ -584,10 +584,10 @@ void PTAMWrapper::HandleFrame()
 		for(unsigned int i=0;i<mapPointsTransformed.size();i++)
 		{
 
-			//memcpy(dat,&mapPointsTransformed[i][0],sizeof(float));
-			//memcpy(dat+sizeof(uint32_t),&mapPointsTransformed[i][1],sizeof(float));
-			//memcpy(dat+2*sizeof(uint32_t),&mapPointsTransformed[i][2],sizeof(float));
-			memcpy(dat,&mapPointsTransformed[i],sizeof(3*float));
+			memcpy(dat,&mapPointsTransformed[i][0],sizeof(float));
+			memcpy(dat+sizeof(uint32_t),&mapPointsTransformed[i][1],sizeof(float));
+			memcpy(dat+2*sizeof(uint32_t),&mapPointsTransformed[i][2],sizeof(float));
+			//memcpy(dat,&mapPointsTransformed[i],sizeof(3*float));
 			dat+=msg_cloud.point_step;
 		}
 
