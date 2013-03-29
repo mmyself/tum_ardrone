@@ -202,7 +202,7 @@ public:
 	//sensor_msgs::PointCloud2 msg_cloud;
 
 	ros::Publisher pub;
-	PointCloud::Ptr msg2;
+	//PointCloud::Ptr msg2;
 
 	//ros::Publisher chatter_pub;
 	

@@ -90,7 +90,7 @@ PTAMWrapper::PTAMWrapper(DroneKalmanFilter* f, EstimationNode* nde)
 	//pub_cloud = n.advertise<sensor_msgs::PointCloud2> ("vslam/pc2", 1);
 	pub = n.advertise<PointCloud> ("points2", 1);
 	//msg2 (new PointCloud);
-	PointCloud::Ptr msg2 (new PointCloud);
+	msg2 (new PointCloud);
 
 }
 
