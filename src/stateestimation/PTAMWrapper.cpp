@@ -77,20 +77,9 @@ PTAMWrapper::PTAMWrapper(DroneKalmanFilter* f, EstimationNode* nde)
 	logfileScalePairs = 0;
 
 	//jan
-	/*chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
-	std_msgs::String msg;
-
-     std::stringstream ss;
-     ss << "hello world " << count;
-     msg.data = ss.str();
-
-     ROS_INFO("%s", msg.data.c_str());
-     chatter_pub.publish(msg);*/
 
 	//pub_cloud = n.advertise<sensor_msgs::PointCloud2> ("vslam/pc2", 1);
-	pub = n.advertise<PointCloud> ("points2", 1);
-	//msg2 (new PointCloud);
-	PointCloud::Ptr msg2 (new PointCloud);
+	pub_cloud = n.advertise<PointCloud> ("vslam/pc2", 1);
 
 }
 
@@ -552,55 +541,27 @@ void PTAMWrapper::HandleFrame()
 		}
 
 		//jan
-		/*static unsigned int seq=0;
-		int dimension   = 3;
+		static unsigned int seq=0;
+		static unsigned int frames_count=0;
+		// every 10th frame
+		if ( ( frames_count % 10 ) == 0 )
+    	{
+			PointCloud::Ptr msg_cloud (new PointCloud);
+			msg_cloud->header.frame_id = "/world";
+			msg_cloud->header.seq=seq;
+			seq++;
+			msg_cloud->header.stamp = ros::Time::now ();
+	  		msg_cloud->height =  1;
+			msg_cloud->width = mapPointsTransformed.size();
 
-		msg_cloud.header.seq=seq;
-		seq++;
-		msg_cloud.header.stamp = ros::Time::now();
-		msg_cloud.height = 1;
-		msg_cloud.header.frame_id = "/world";
+			for(unsigned int i=0;i<mapPointsTransformed.size();i++)
+			{
+				msg_cloud->points.push_back (pcl::PointXYZ(mapPointsTransformed[i][0], mapPointsTransformed[i][1], mapPointsTransformed[i][2]));
+			}
 
-		msg_cloud.width = mapPointsTransformed.size();
-		msg_cloud.fields.resize(dimension);
-		msg_cloud.fields[0].name = "x";
-		msg_cloud.fields[0].offset = 0*sizeof(uint32_t);
-		msg_cloud.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
-		msg_cloud.fields[0].count = 1;
-		msg_cloud.fields[1].name = "y";
-		msg_cloud.fields[1].offset = 1*sizeof(uint32_t);
-		msg_cloud.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
-		msg_cloud.fields[1].count = 1;
-		msg_cloud.fields[2].name = "z";
-		msg_cloud.fields[2].offset = 2*sizeof(uint32_t);
-		msg_cloud.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
-		msg_cloud.fields[2].count = 1;
-
-		msg_cloud.point_step = dimension*sizeof(uint32_t);
-		msg_cloud.row_step = msg_cloud.point_step * msg_cloud.width;
-		msg_cloud.data.resize(msg_cloud.row_step * msg_cloud.height);
-		msg_cloud.is_dense = false;
-
-		unsigned char* dat = &(msg_cloud.data[0]);*/
-		msg2->header.frame_id = "world";
-  		msg2->height = msg2->width = 1;
-  		msg2->points.push_back (pcl::PointXYZ(1.0, 2.0, 3.0));
-
-		/*for(unsigned int i=0;i<mapPointsTransformed.size();i++)
-		{
-
-			memcpy(dat,&mapPointsTransformed[i][0],sizeof(float));
-			memcpy(dat+sizeof(uint32_t),&mapPointsTransformed[i][1],sizeof(float));
-			memcpy(dat+2*sizeof(uint32_t),&mapPointsTransformed[i][2],sizeof(float));
-			//memcpy(dat,&mapPointsTransformed[i],sizeof(3*float));
-			dat+=msg_cloud.point_step;
+			pub_cloud.publish(msg_cloud);
 		}
-
-		pub_cloud.publish(msg_cloud);*/
-
-		msg2->header.stamp = ros::Time::now ();
-    	pub.publish (msg2);
-
+		frames_count++;
 		//jan
 
 		// flush map keypoints

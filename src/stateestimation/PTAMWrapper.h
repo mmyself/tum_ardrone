@@ -198,13 +198,7 @@ public:
 
 	// jan
 	ros::NodeHandle n;
-	//ros::Publisher pub_cloud;
-	//sensor_msgs::PointCloud2 msg_cloud;
-
-	ros::Publisher pub;
-	PointCloud::Ptr msg2;
-
-	//ros::Publisher chatter_pub;
+	ros::Publisher pub_cloud;
 	
 };
 
