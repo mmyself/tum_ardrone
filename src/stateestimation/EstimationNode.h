@@ -61,6 +61,8 @@ private:
 
 	// output
 	ros::Publisher dronepose_pub;
+	ros::Publisher drone_std_pose_pub;
+	ros::Publisher drone_point_cloud_pub;
 
 	ros::NodeHandle nh_;
 
@@ -76,6 +78,8 @@ private:
 	std::string navdata_channel;
 	std::string control_channel;
 	std::string output_channel;
+	std::string std_pose_channel;
+	std::string point_cloud_channel;
 	std::string video_channel;
 	std::string command_channel;
 
@@ -86,6 +90,7 @@ private:
 	long lastRosTS;
 	long droneRosTSOffset;
 
+	int lastKF;
 
 	// save last navinfo received for forwarding...
 	ardrone_autonomy::Navdata lastNavdataReceived;

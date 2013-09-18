@@ -23,7 +23,10 @@
 #include "ros/ros.h"
 #include "ros/package.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/Image.h"
+#include "sensor_msgs/PointField.h"
+#include "sensor_msgs/PointCloud2.h"
 #include "tf/tfMessage.h"
 #include "tf/transform_listener.h"
 #include "tf/transform_broadcaster.h"
@@ -54,6 +57,8 @@ EstimationNode::EstimationNode()
     navdata_channel = nh_.resolveName("ardrone/navdata");
     control_channel = nh_.resolveName("cmd_vel");
     output_channel = nh_.resolveName("ardrone/predictedPose");
+    std_pose_channel = nh_.resolveName("/ardrone/std_pose");
+    point_cloud_channel = nh_.resolveName("/ardrone/point_cloud");
     video_channel = nh_.resolveName("ardrone/image_raw");
     command_channel = nh_.resolveName("tum_ardrone/com");
 	packagePath = ros::package::getPath("tum_ardrone");
@@ -85,6 +90,8 @@ EstimationNode::EstimationNode()
 	vid_sub          = nh_.subscribe(video_channel,10, &EstimationNode::vidCb, this);
 
 	dronepose_pub	   = nh_.advertise<tum_ardrone::filter_state>(output_channel,1);
+	drone_std_pose_pub = nh_.advertise<geometry_msgs::PoseStamped>(std_pose_channel,1);
+	drone_point_cloud_pub = nh_.advertise<sensor_msgs::PointCloud2>(point_cloud_channel,1);
 
 	tum_ardrone_pub	   = nh_.advertise<std_msgs::String>(command_channel,50);
 	tum_ardrone_sub	   = nh_.subscribe(command_channel,50, &EstimationNode::comCb, this);
@@ -96,6 +103,7 @@ EstimationNode::EstimationNode()
 	currentLogID = 0;
 	lastDroneTS = 0;
 	lastRosTS = 0;
+	lastKF = 0;
 	droneRosTSOffset = 0;
 	lastNavStamp = ros::Time(0);
 	filter = new DroneKalmanFilter(this);
@@ -268,6 +276,7 @@ void EstimationNode::Loop()
 		  // get filter state msg
 		  pthread_mutex_lock( &filter->filter_CS );
 		  tum_ardrone::filter_state s = filter->getPoseAt(ros::Time().now() + predTime);
+		  tum_ardrone::filter_state t_pose = filter->getCurrentPoseSpeed();
 		  pthread_mutex_unlock( &filter->filter_CS );
 
 		  // fill metadata
@@ -280,6 +289,92 @@ void EstimationNode::Loop()
 
 		  // publish!
 		  dronepose_pub.publish(s);
+
+
+			geometry_msgs::PoseStamped pose_stmp;
+			pose_stmp.header.stamp = ros::Time().now();
+			pose_stmp.header.frame_id = '1';
+			pose_stmp.pose.position.x = t_pose.x;
+			pose_stmp.pose.position.y = t_pose.y;
+			pose_stmp.pose.position.z = t_pose.z;
+			geometry_msgs::Quaternion q = tf::createQuaternionMsgFromRollPitchYaw(t_pose.roll*3.1415/180,t_pose.pitch*3.1415/180,(-t_pose.yaw+90)*3.1415/180);
+
+			pose_stmp.pose.orientation = q;
+
+			drone_std_pose_pub.publish(pose_stmp);
+
+
+
+			// POINT CLOUD 2
+
+			int currentKF = ptamWrapper->keyFramesTransformed.size() ;
+
+			if (currentKF > lastKF) {
+				lastKF = currentKF;
+
+				sensor_msgs::PointCloud2 point_cloud;
+
+				pthread_mutex_lock(&ptamWrapper->shallowMapCS);
+
+				std::vector<tvec3> mpl = ptamWrapper->mapPointsTransformed;
+				int dimension = 3;
+
+				point_cloud.width = mpl.size();
+
+				point_cloud.header.stamp = ros::Time().now();
+				point_cloud.header.frame_id = '1';
+				point_cloud.height = 1;
+
+				point_cloud.fields.resize(dimension);
+
+				point_cloud.fields[0].name = "x";
+				point_cloud.fields[0].offset = 0*sizeof(uint32_t);
+				point_cloud.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
+				point_cloud.fields[0].count = 1;
+
+				point_cloud.fields[1].name = "y";
+				point_cloud.fields[1].offset = 1*sizeof(uint32_t);
+				point_cloud.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
+				point_cloud.fields[1].count = 1;
+
+				point_cloud.fields[2].name = "z";
+				point_cloud.fields[2].offset = 2*sizeof(uint32_t);
+				point_cloud.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
+				point_cloud.fields[2].count = 1;
+
+				/*point_cloud.fields[3].name = "rgb";
+				point_cloud.fields[3].offset = 3*sizeof(uint32_t);
+				point_cloud.fields[3].datatype = sensor_msgs::PointField::INT32;
+				point_cloud.fields[3].count = 1;*/
+
+
+
+				point_cloud.point_step = dimension*sizeof(uint32_t);
+				point_cloud.row_step = point_cloud.point_step * point_cloud.width;
+
+				point_cloud.data.resize(point_cloud.row_step * point_cloud.height);
+
+				point_cloud.is_dense = false;
+
+				unsigned char* dat = &(point_cloud.data[0]);
+
+				for(unsigned int i=0 ; i < point_cloud.width; i++)
+				{
+				     float pos[] = {mpl[i][0], mpl[i][1], mpl[i][2]};
+				     memcpy(dat, pos ,3*sizeof(float));
+
+				     //uint32_t colorlvl = 0xffffffff;
+				     //memcpy(dat+3*sizeof(uint32_t),&colorlvl,sizeof(uint32_t));
+
+				 	dat+=point_cloud.point_step;
+
+				}
+
+				pthread_mutex_unlock(&ptamWrapper->shallowMapCS);
+
+				drone_point_cloud_pub.publish(point_cloud);
+			}
+
 
 
 		  // --------- if need be: add fake PTAM obs --------
