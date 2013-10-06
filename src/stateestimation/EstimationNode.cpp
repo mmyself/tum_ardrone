@@ -293,7 +293,7 @@ void EstimationNode::Loop()
 
 			geometry_msgs::PoseStamped pose_stmp;
 			pose_stmp.header.stamp = ros::Time().now();
-			pose_stmp.header.frame_id = '1';
+			pose_stmp.header.frame_id = 'base_link';
 			pose_stmp.pose.position.x = t_pose.x;
 			pose_stmp.pose.position.y = t_pose.y;
 			pose_stmp.pose.position.z = t_pose.z;
@@ -322,7 +322,7 @@ void EstimationNode::Loop()
 				point_cloud.width = mpl.size();
 
 				point_cloud.header.stamp = ros::Time().now();
-				point_cloud.header.frame_id = '1';
+				point_cloud.header.frame_id = 'pcl';
 				point_cloud.height = 1;
 
 				point_cloud.fields.resize(dimension);
